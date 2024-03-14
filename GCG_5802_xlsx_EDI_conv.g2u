@@ -1,0 +1,529 @@
+Program.Sub.ScreenSU.Start
+Gui.F_Worksheets..Create
+Gui.F_Worksheets..Size(4560,2790)
+Gui.F_Worksheets..MinX(0)
+Gui.F_Worksheets..MinY(0)
+Gui.F_Worksheets..Position(0,0)
+Gui.F_Worksheets..BackColor(-2147483633)
+Gui.F_Worksheets..MousePointer(0)
+Gui.F_Worksheets..Event(UnLoad,F_Worksheets_UnLoad)
+Gui.F_Worksheets..MaxButton(False)
+Gui.F_Worksheets..Sizeable(False)
+Gui.F_Worksheets..Caption("Select Worksheets")
+Gui.F_Worksheets.gsgcWorksheets.Create(GsGridControl)
+Gui.F_Worksheets.gsgcWorksheets.Size(4440,1695)
+Gui.F_Worksheets.gsgcWorksheets.Position(0,0)
+Gui.F_Worksheets.cmdProceed.Create(Button)
+Gui.F_Worksheets.cmdProceed.Size(945,375)
+Gui.F_Worksheets.cmdProceed.Position(210,1890)
+Gui.F_Worksheets.cmdProceed.Caption("Proceed")
+Gui.F_Worksheets.cmdProceed.Event(Click,cmdProceed_Click)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.External.Include.Library("GCG_5802_Try_Catch.lib")
+V.Global.sFile.Declare
+V.Global.sFileName.Declare
+V.Global.sFilePath.Declare
+V.Global.sFileExt.Declare
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'Author: BixRB
+'Date: 12/20/2019
+'GCG_5802_xlsx_EDI_conv.g2u
+'Millenium Concepts, Inc.
+'Pass an excel file that this program will convert to an EDI file to be processed by Global Shop
+V.Local.sWorksheets.Declare
+V.Local.sTemp.Declare
+V.Local.iCnt.Declare
+V.Local.iWksht.Declare
+F.Intrinsic.Control.Try
+
+F.Intrinsic.Control.CallSub(GetFile)
+
+F.Automation.MSExcel.CreateAppObject("moDataRead")
+F.Automation.MSExcel.OpenWorkbook("moDataRead","xlsForecast",V.Global.sFile)
+
+F.Data.DataTable.Create("dtWorksheets",True)
+F.Data.DataTable.AddColumn("dtWorksheets","SELECT","Boolean")
+F.Data.DataTable.AddColumn("dtWorksheets","WORKSHEET","String")
+F.Data.DataTable.AddColumn("dtWorksheets","WORKSHEET_NAME","String")
+
+F.Data.DataView.Create("dtWorksheets","dvSelected",22,"SELECT = True",)
+
+F.Automation.MSExcel.EnumerateWorksheets("xlsForecast",V.Local.sWorksheets)
+F.Intrinsic.String.Split(V.Local.sWorksheets,"*!*",V.Local.sWorksheets)
+
+F.Intrinsic.Control.For(V.Local.iCnt,0,V.Local.sWorksheets.UBound,1)
+	F.Intrinsic.Math.Add(V.Local.iCnt,1,V.Local.iWksht)
+	F.Intrinsic.String.Build("{0} - {1}",V.Local.iWksht,V.Local.sWorksheets(V.Local.iCnt),V.Local.sTemp)
+	
+	F.Data.DataTable.AddRow("dtWorksheets","SELECT",True,"WORKSHEET",V.Local.sTemp,"WORKSHEET_NAME",V.Local.sWorksheets(V.Local.iCnt))
+F.Intrinsic.Control.Next(V.Local.iCnt)
+
+F.Automation.MSExcel.OpenWorksheet("xlsForecast","wks",1)
+F.Automation.MSExcel.DestroyAllObjects("moDataRead","xlsForecast","wks")
+
+Gui.F_Worksheets.gsgcWorksheets.AddGridviewFromDataTable("gvWksht","dtWorksheets")
+
+Gui.F_Worksheets.gsgcWorksheets.SetGridviewProperty("gvWksht","MultiSelect",False)
+Gui.F_Worksheets.gsgcWorksheets.SetGridviewProperty("gvWksht","AllowSort",False)
+Gui.F_Worksheets.gsgcWorksheets.SetGridviewProperty("gvWksht","AllowFilter",False)
+Gui.F_Worksheets.gsgcWorksheets.SetGridviewProperty("gvWksht","ShowGroupPanel",False)
+Gui.F_Worksheets.gsgcWorksheets.SetGridviewProperty("gvWksht","AllowColumnResizing",False)
+Gui.F_Worksheets.gsgcWorksheets.SetGridviewProperty("gvWksht","AllowColumnMoving",False)
+Gui.F_Worksheets.gsgcWorksheets.SetGridviewProperty("gvWksht","OptionsViewColumnAutoWidth",False)
+
+Gui.F_Worksheets.gsgcWorksheets.SetColumnProperty("gvWksht","WORKSHEET_NAME","Visible",False)
+
+Gui.F_Worksheets.gsgcWorksheets.SetColumnProperty("gvWksht","SELECT","Caption"," ")
+Gui.F_Worksheets.gsgcWorksheets.SetColumnProperty("gvWksht","WORKSHEET","Caption","Worksheet")
+
+Gui.F_Worksheets.gsgcWorksheets.SetColumnProperty("gvWksht","SELECT","Width",35)
+Gui.F_Worksheets.gsgcWorksheets.SetColumnProperty("gvWksht","WORKSHEET","Width",242)
+
+Gui.F_Worksheets.gsgcWorksheets.SetColumnProperty("gvWksht","WORKSHEET","AllowFocus",False)
+
+Gui.F_Worksheets.gsgcWorksheets.SetColumnProperty("gvWksht","SELECT","AllowEdit",True)
+Gui.F_Worksheets.gsgcWorksheets.SetColumnProperty("gvWksht","SELECT","ReadOnly",False)
+
+Gui.F_Worksheets.gsgcWorksheets.MainView("gvWksht")
+Gui.F_Worksheets..Show
+Gui.F_Worksheets..SetFocus
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.CallSub(ErrorMessage,"ScriptFile",V.Caller.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine)
+F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.GetFile.Start
+'Prompt for file entry
+V.Local.sRet.Declare
+V.Local.sExt.Declare
+F.Intrinsic.Control.Try
+
+F.Intrinsic.UI.ShowOpenFileDialog("","Excel Workbook [*.xlsx,*.xls]|*.xlsx;*.xls","",V.Local.sRet)
+
+F.Intrinsic.Control.If(V.Local.sRet.IsNotCancel)
+	'record file information for processing and checking
+	V.Global.sFile.Set(V.Local.sRet)
+	
+	F.Intrinsic.String.Split(V.Local.sRet,"\",V.Local.sRet)
+	V.Global.sFileName.Set(V.Local.sRet(V.Local.sRet.UBound))
+	
+	F.Intrinsic.String.Split(V.Local.sRet(V.Local.sRet.UBound),".",V.Local.sExt)
+	V.Local.sExt(0).Set(V.Local.sExt(V.Local.sExt.UBound))
+	V.Local.sExt.RedimPreserve(0,0)
+	F.Intrinsic.String.Build(".{0}",V.Local.sExt,V.Local.sExt)
+	V.Global.sFileExt.Set(V.Local.sExt)
+	
+	V.Local.sRet(V.Local.sRet.UBound).Set("")
+	F.Intrinsic.String.Join(V.Local.sRet,"\",V.Local.sRet)
+	V.Local.sRet.RedimPreserve(0,0)
+	V.Global.sFilePath.Set(V.Local.sRet)
+F.Intrinsic.Control.Else
+	'Cancel was clicked, end program
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.CallSub(ErrorMessage,"ScriptFile",V.Caller.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine)
+F.Intrinsic.Control.EndTry
+Program.Sub.GetFile.End
+
+Program.Sub.F_Worksheets_UnLoad.Start
+F.Intrinsic.Control.End
+Program.Sub.F_Worksheets_UnLoad.End
+
+Program.Sub.cmdProceed_Click.Start
+'Use selected worksheets to check their format and convert to an EDI file
+V.Local.sFile.Declare
+V.Local.sWorkBook.Declare
+V.Local.sWorkSheet.Declare
+V.Local.sColumns.Declare
+V.Local.sDataTypes.Declare
+V.Local.sMsg.Declare
+V.Local.sFilter.Declare
+V.Local.sType.Declare
+V.Local.sFileString.Declare
+V.Local.sData.Declare
+V.Local.sFileStringLine.Declare
+V.Local.sForecast.Declare
+V.Local.sNumber.Declare
+V.Local.sOldFileString.Declare
+V.Local.iWKSHT.Declare
+V.Local.iROW.Declare
+V.Local.iColumnCnt.Declare
+V.Local.iCnt.Declare
+V.Local.iCnt2.Declare
+V.Local.bExists.Declare
+V.Local.bContains.Declare
+V.Local.dData.Declare
+V.Local.iRet.Declare(Long)
+F.Intrinsic.Control.Try
+
+Gui.F_Worksheets..Visible(False)
+
+F.Intrinsic.Control.If(V.DataView.dtWorksheets!dvSelected.RowCount,=,0)
+	F.Intrinsic.UI.Msgbox("No worksheets selected, exiting program.")
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndIf
+
+F.Data.DataTable.Create("dtEDIFileH")
+F.Data.DataTable.AddColumn("dtEDIFileH","ForecastPONum","String")
+F.Data.DataTable.AddColumn("dtEDIFileH","PartnerVendor","String")
+F.Data.DataView.Create("dtEDIFileH","dvCheck")
+
+F.Data.DataTable.Create("dtEDIFileA")
+F.Data.DataTable.AddColumn("dtEDIFileA","ForecastPONum","String")
+F.Data.DataTable.AddColumn("dtEDIFileA","PartnerVendor","String")
+F.Data.DataTable.AddColumn("dtEDIFileA","ForecastDateUser1","String")
+F.Data.DataTable.AddColumn("dtEDIFileA","ContractUser2","String")
+F.Data.DataView.Create("dtEDIFileA","dvCheck")
+
+F.Data.DataTable.Create("dtEDIFileL")
+F.Data.DataTable.AddColumn("dtEDIFileL","ForecastPONum","String")
+F.Data.DataTable.AddColumn("dtEDIFileL","PartnerVendor","String")
+F.Data.DataTable.AddColumn("dtEDIFileL","POLine","String")
+F.Data.DataTable.AddColumn("dtEDIFileL","POLineNum","String")
+F.Data.DataTable.AddColumn("dtEDIFileL","SupplierPartNum","String")
+F.Data.DataTable.AddColumn("dtEDIFileL","PartDesc","String")
+F.Data.DataTable.AddColumn("dtEDIFileL","UOM","String")
+F.Data.DataTable.AddColumn("dtEDIFileL","Qty","String")
+F.Data.DataTable.AddColumn("dtEDIFileL","DeliveryPromiseDate","String")
+F.Data.DataTable.AddColumn("dtEDIFileL","OrderType","String")
+F.Data.DataView.Create("dtEDIFileL","dvLines",22,,"POLine asc, DeliveryPromiseDate asc")
+
+F.Automation.MSExcel.ReadSpreadsheet(V.Global.sFile,V.Local.sWorkBook)
+F.Intrinsic.String.Split(V.Local.sWorkBook,"&^&",V.Local.sWorkBook)
+
+F.Intrinsic.Control.For(V.Local.iWKSHT,0,V.Local.sWorkBook.UBound,1)
+	F.Intrinsic.Control.Label("FORNEXT")
+	F.Intrinsic.Control.If(V.Local.iWKSHT,>,V.Local.sWorkBook.UBound)
+		F.Intrinsic.Control.ExitFor(V.Local.iWKSHT)
+	F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.If(V.DataTable.dtWorksheets(V.Local.iWKSHT).SELECT!FieldVal)
+		'Worksheet is flagged for EDI, so convert the info into the datatable
+		F.Intrinsic.String.Split(V.Local.sWorkBook(V.Local.iWKSHT),"$!$",V.Local.sWorkSheet)
+		V.Local.sColumns.Set(V.Local.sWorkSheet(0))
+		F.Intrinsic.Variable.RemoveArrayElementByOrdinal(V.Local.sWorkSheet,0,V.Local.sWorkSheet)
+		F.Intrinsic.String.Join(V.Local.sWorkSheet,"$!$",V.Local.sWorkSheet)
+		V.Local.sWorkSheet.RedimPreserve(0,0)
+		F.Intrinsic.String.Split(V.Local.sColumns,"*!*",V.Local.sColumns)
+		V.Local.iColumnCnt.Set(V.Local.sColumns.UBound)
+		F.Intrinsic.String.Join(V.Local.sColumns,"*!*",V.Local.sColumns)
+		V.Local.sColumns.RedimPreserve(0,0)
+		V.Local.sDataTypes.Set("String")
+		F.Intrinsic.Control.For(V.Local.iCnt,1,V.Local.iColumnCnt,1)
+			F.Intrinsic.Variable.AddToArray(V.Local.sDataTypes,"String")
+		F.Intrinsic.Control.Next(V.Local.iCnt)
+		F.Intrinsic.String.Join(V.Local.sDataTypes,"*!*",V.Local.sDataTypes)
+		V.Local.sDataTypes.RedimPreserve(0,0)
+		
+		'Check datatable columns for key columns
+		F.Intrinsic.String.IsInString(V.Local.sColumns,"Partner",True,V.Local.bContains)
+		F.Intrinsic.Control.If(V.Local.bContains.Not)
+			F.Intrinsic.String.Build("Worksheet {0} is missing the column 'Partner' and cannot be processed without it.",V.DataTable.dtWorksheets(V.Local.iWKSHT).WORKSHEET_NAME!FieldVal,V.Local.sMsg)
+			F.Intrinsic.UI.Msgbox(V.Local.sMsg,"Skipping Worksheet")
+			F.Intrinsic.Math.Add(V.Local.iWKSHT,1,V.Local.iWKSHT)
+			F.Intrinsic.Control.GoTo("FORNEXT")
+		F.Intrinsic.Control.EndIf
+		F.Intrinsic.String.Replace(V.Local.sColumns,"Partner","PARTNER",V.Local.sColumns)
+		F.Intrinsic.String.IsInString(V.Local.sColumns,"Forecast #",True,V.Local.bContains)
+		F.Intrinsic.Control.If(V.Local.bContains.Not)
+			F.Intrinsic.String.Build("Worksheet {0} is missing the column 'Forecast #' and cannot be processed without it.",V.DataTable.dtWorksheets(V.Local.iWKSHT).WORKSHEET_NAME!FieldVal,V.Local.sMsg)
+			F.Intrinsic.UI.Msgbox(V.Local.sMsg,"Skipping Worksheet")
+			F.Intrinsic.Math.Add(V.Local.iWKSHT,1,V.Local.iWKSHT)
+			F.Intrinsic.Control.GoTo("FORNEXT")
+		F.Intrinsic.Control.EndIf
+		F.Intrinsic.String.Replace(V.Local.sColumns,"Forecast #","PO_NUM",V.Local.sColumns)
+		F.Intrinsic.String.IsInString(V.Local.sColumns,"Line #",True,V.Local.bContains)
+		F.Intrinsic.Control.If(V.Local.bContains.Not)
+			F.Intrinsic.String.Build("Worksheet {0} is missing the column 'Line #' and cannot be processed without it.",V.DataTable.dtWorksheets(V.Local.iWKSHT).WORKSHEET_NAME!FieldVal,V.Local.sMsg)
+			F.Intrinsic.UI.Msgbox(V.Local.sMsg,"Skipping Worksheet")
+			F.Intrinsic.Math.Add(V.Local.iWKSHT,1,V.Local.iWKSHT)
+			F.Intrinsic.Control.GoTo("FORNEXT")
+		F.Intrinsic.Control.EndIf
+		F.Intrinsic.String.Replace(V.Local.sColumns,"Line #","LINE_NUM",V.Local.sColumns)
+		F.Intrinsic.String.IsInString(V.Local.sColumns,"Supplier Part Number",True,V.Local.bContains)
+		F.Intrinsic.Control.If(V.Local.bContains.Not)
+			F.Intrinsic.String.Build("Worksheet {0} is missing the column 'Supplier Part Number' and cannot be processed without it.",V.DataTable.dtWorksheets(V.Local.iWKSHT).WORKSHEET_NAME!FieldVal,V.Local.sMsg)
+			F.Intrinsic.UI.Msgbox(V.Local.sMsg,"Skipping Worksheet")
+			F.Intrinsic.Math.Add(V.Local.iWKSHT,1,V.Local.iWKSHT)
+			F.Intrinsic.Control.GoTo("FORNEXT")
+		F.Intrinsic.Control.EndIf
+		F.Intrinsic.String.Replace(V.Local.sColumns,"Supplier Part Number","PART",V.Local.sColumns)
+		F.Intrinsic.String.IsInString(V.Local.sColumns,"Part Desc",True,V.Local.bContains)
+		F.Intrinsic.Control.If(V.Local.bContains.Not)
+			F.Intrinsic.String.Build("Worksheet {0} is missing the column 'Part Desc' and cannot be processed without it.",V.DataTable.dtWorksheets(V.Local.iWKSHT).WORKSHEET_NAME!FieldVal,V.Local.sMsg)
+			F.Intrinsic.UI.Msgbox(V.Local.sMsg,"Skipping Worksheet")
+			F.Intrinsic.Math.Add(V.Local.iWKSHT,1,V.Local.iWKSHT)
+			F.Intrinsic.Control.GoTo("FORNEXT")
+		F.Intrinsic.Control.EndIf
+		F.Intrinsic.String.Replace(V.Local.sColumns,"Part Desc","DESC",V.Local.sColumns)
+		F.Intrinsic.String.IsInString(V.Local.sColumns,"UOM",True,V.Local.bContains)
+		F.Intrinsic.Control.If(V.Local.bContains.Not)
+			F.Intrinsic.String.Build("Worksheet {0} is missing the column 'UOM' and cannot be processed without it.",V.DataTable.dtWorksheets(V.Local.iWKSHT).WORKSHEET_NAME!FieldVal,V.Local.sMsg)
+			F.Intrinsic.UI.Msgbox(V.Local.sMsg,"Skipping Worksheet")
+			F.Intrinsic.Math.Add(V.Local.iWKSHT,1,V.Local.iWKSHT)
+			F.Intrinsic.Control.GoTo("FORNEXT")
+		F.Intrinsic.Control.EndIf
+		F.Intrinsic.String.IsInString(V.Local.sColumns,"Qty",True,V.Local.bContains)
+		F.Intrinsic.Control.If(V.Local.bContains.Not)
+			F.Intrinsic.String.Build("Worksheet {0} is missing the column 'Qty' and cannot be processed without it.",V.DataTable.dtWorksheets(V.Local.iWKSHT).WORKSHEET_NAME!FieldVal,V.Local.sMsg)
+			F.Intrinsic.UI.Msgbox(V.Local.sMsg,"Skipping Worksheet")
+			F.Intrinsic.Math.Add(V.Local.iWKSHT,1,V.Local.iWKSHT)
+			F.Intrinsic.Control.GoTo("FORNEXT")
+		F.Intrinsic.Control.EndIf
+		F.Intrinsic.String.Replace(V.Local.sColumns,"Qty","QTY",V.Local.sColumns)
+		F.Intrinsic.String.IsInString(V.Local.sColumns,"Delivery Date",True,V.Local.bContains)
+		F.Intrinsic.Control.If(V.Local.bContains.Not)
+			F.Intrinsic.String.Build("Worksheet {0} is missing the column 'Delivery Date' and cannot be processed without it.",V.DataTable.dtWorksheets(V.Local.iWKSHT).WORKSHEET_NAME!FieldVal,V.Local.sMsg)
+			F.Intrinsic.UI.Msgbox(V.Local.sMsg,"Skipping Worksheet")
+			F.Intrinsic.Math.Add(V.Local.iWKSHT,1,V.Local.iWKSHT)
+			F.Intrinsic.Control.GoTo("FORNEXT")
+		F.Intrinsic.Control.EndIf
+		F.Intrinsic.String.Replace(V.Local.sColumns,"Delivery Date","DELIV_DATE",V.Local.sColumns)
+		F.Intrinsic.String.IsInString(V.Local.sColumns,"Type",True,V.Local.bContains)
+		F.Intrinsic.Control.If(V.Local.bContains.Not)
+			F.Intrinsic.String.Build("Worksheet {0} is missing the column 'Type' and cannot be processed without it.",V.DataTable.dtWorksheets(V.Local.iWKSHT).WORKSHEET_NAME!FieldVal,V.Local.sMsg)
+			F.Intrinsic.UI.Msgbox(V.Local.sMsg,"Skipping Worksheet")
+			F.Intrinsic.Math.Add(V.Local.iWKSHT,1,V.Local.iWKSHT)
+			F.Intrinsic.Control.GoTo("FORNEXT")
+		F.Intrinsic.Control.EndIf
+		F.Intrinsic.String.Replace(V.Local.sColumns,"Type","TYPE",V.Local.sColumns)
+		F.Intrinsic.String.IsInString(V.Local.sColumns,"Forecast Run Date",True,V.Local.bContains)
+		F.Intrinsic.Control.If(V.Local.bContains.Not)
+			F.Intrinsic.String.Build("Worksheet {0} is missing the column 'Forecast Run Date' and cannot be processed without it.",V.DataTable.dtWorksheets(V.Local.iWKSHT).WORKSHEET_NAME!FieldVal,V.Local.sMsg)
+			F.Intrinsic.UI.Msgbox(V.Local.sMsg,"Skipping Worksheet")
+			F.Intrinsic.Math.Add(V.Local.iWKSHT,1,V.Local.iWKSHT)
+			F.Intrinsic.Control.GoTo("FORNEXT")
+		F.Intrinsic.Control.EndIf
+		F.Intrinsic.String.Replace(V.Local.sColumns,"Forecast Run Date","RUNDATE",V.Local.sColumns)
+		F.Intrinsic.String.IsInString(V.Local.sColumns,"Contract Number",True,V.Local.bContains)
+		F.Intrinsic.Control.If(V.Local.bContains.Not)
+			F.Intrinsic.String.Build("Worksheet {0} is missing the column 'Contract Number' and cannot be processed without it.",V.DataTable.dtWorksheets(V.Local.iWKSHT).WORKSHEET_NAME!FieldVal,V.Local.sMsg)
+			F.Intrinsic.UI.Msgbox(V.Local.sMsg,"Skipping Worksheet")
+			F.Intrinsic.Math.Add(V.Local.iWKSHT,1,V.Local.iWKSHT)
+			F.Intrinsic.Control.GoTo("FORNEXT")
+		F.Intrinsic.Control.EndIf
+		F.Intrinsic.String.Replace(V.Local.sColumns,"Contract Number","CONTRACTNUM",V.Local.sColumns)
+		
+		F.Data.DataTable.CreateFromString("dtWorksheet",V.Local.sWorkSheet,V.Local.sColumns,V.Local.sDataTypes,"*!*","$!$")
+		'Loop through datatable and convert the rows into the new datatables
+		F.Intrinsic.Control.If(V.DataTable.dtWorksheet.RowCount,>,1)
+			F.Intrinsic.String.Build("Processing raw data in {0} Worksheet",V.DataTable.dtWorksheets(V.Local.iWKSHT).WORKSHEET_NAME!FieldVal,V.Local.sMsg)
+			F.Intrinsic.UI.InvokeWaitDialog(V.Local.sMsg,"Processing Worksheet")
+		F.Intrinsic.Control.EndIf
+		F.Intrinsic.Control.For(V.Local.iROW,0,V.DataTable.dtWorksheet.RowCount--,1)
+			F.Intrinsic.Control.If(V.DataTable.dtWorksheet.RowCount,>,1)
+				F.Intrinsic.UI.ChangeWaitStatus(V.Local.sMsg,V.Local.iROW,0,V.DataTable.dtWorksheet.RowCount--)
+			F.Intrinsic.Control.EndIf
+			'Check if Forecast # has a record in the header
+			F.Intrinsic.String.Build("ForecastPONum = '{0}'",V.DataTable.dtWorksheet(V.Local.iROW).PO_NUM!FieldVal,V.Local.sFilter)
+			F.Data.DataView.SetFilter("dtEDIFileH","dvCheck",V.Local.sFilter)
+			F.Intrinsic.Control.If(V.DataView.dtEDIFileH!dvCheck.RowCount,=,0)
+				'Add Header record
+				V.Local.sForecast.Set(V.DataTable.dtWorksheet(V.Local.iROW).PO_NUM!FieldVal)
+				F.Data.DataTable.AddRow("dtEDIFileH","ForecastPONum",V.Local.sForecast,"PartnerVendor",V.DataTable.dtWorksheet(V.Local.iROW).PARTNER!FieldVal)
+			F.Intrinsic.Control.Else
+				F.Intrinsic.String.Build("ForecastPONum = '{0}' and PartnerVendor = '{1}'",V.DataTable.dtWorksheet(V.Local.iROW).PO_NUM!FieldVal,V.DataTable.dtWorksheet(V.Local.iROW).PARTNER!FieldVal,V.Local.sFilter)
+				F.Data.DataView.SetFilter("dtEDIFileH","dvCheck",V.Local.sFilter)
+				F.Intrinsic.Control.If(V.DataView.dtEDIFileH!dvCheck.RowCount,=,0)
+					F.Intrinsic.String.Build("ForecastPONum = '{0}{1}' and PartnerVendor = '{2}'",V.DataTable.dtWorksheet(V.Local.iROW).PO_NUM!FieldVal,V.DataTable.dtWorksheet(V.Local.iROW).LINE_NUM!FieldVal,V.DataTable.dtWorksheet(V.Local.iROW).PARTNER!FieldVal,V.Local.sFilter)
+					F.Data.DataView.SetFilter("dtEDIFileH","dvCheck",V.Local.sFilter)
+					F.Intrinsic.Control.If(V.DataView.dtEDIFileH!dvCheck.RowCount,=,0)
+						F.Intrinsic.String.Build("{0}{1}",V.DataTable.dtWorksheet(V.Local.iROW).PO_NUM!FieldVal,V.DataTable.dtWorksheet(V.Local.iROW).LINE_NUM!FieldVal,V.Local.sForecast)
+						F.Data.DataTable.AddRow("dtEDIFileH","ForecastPONum",V.Local.sForecast,"PartnerVendor",V.DataTable.dtWorksheet(V.Local.iROW).PARTNER!FieldVal)
+					F.Intrinsic.Control.Else
+						F.Intrinsic.String.Build("{0}{1}",V.DataTable.dtWorksheet(V.Local.iROW).PO_NUM!FieldVal,V.DataTable.dtWorksheet(V.Local.iROW).LINE_NUM!FieldVal,V.Local.sForecast)
+					F.Intrinsic.Control.EndIf
+				F.Intrinsic.Control.Else
+					F.Intrinsic.String.Build("ForecastPONum = '{0}' and POLine = '{1}' and PartnerVendor = '{2}'",V.DataTable.dtWorksheet(V.Local.iROW).PO_NUM!FieldVal,V.DataTable.dtWorksheet(V.Local.iROW).LINE_NUM!FieldVal,V.DataTable.dtWorksheet(V.Local.iROW).PARTNER!FieldVal,V.Local.sFilter)
+					F.Data.DataView.SetFilter("dtEDIFileL","dvLines",V.Local.sFilter)
+					F.Intrinsic.Control.If(V.DataView.dtEDIFileL!dvLines.RowCount,=,0)
+						V.Local.sForecast.Set(V.DataTable.dtWorksheet(V.Local.iROW).PO_NUM!FieldVal)
+					F.Intrinsic.Control.Else
+						F.Intrinsic.String.Build("ForecastPONum = '{0}{1}' and PartnerVendor = '{2}'",V.DataTable.dtWorksheet(V.Local.iROW).PO_NUM!FieldVal,V.DataTable.dtWorksheet(V.Local.iROW).LINE_NUM!FieldVal,V.DataTable.dtWorksheet(V.Local.iROW).PARTNER!FieldVal,V.Local.sFilter)
+						F.Data.DataView.SetFilter("dtEDIFileH","dvCheck",V.Local.sFilter)
+						F.Intrinsic.Control.If(V.DataView.dtEDIFileH!dvCheck.RowCount,=,0)
+							V.Local.sForecast.Set(V.DataTable.dtWorksheet(V.Local.iROW).PO_NUM!FieldVal)
+						F.Intrinsic.Control.Else
+							F.Intrinsic.String.Build("{0}{1}",V.DataTable.dtWorksheet(V.Local.iROW).PO_NUM!FieldVal,V.DataTable.dtWorksheet(V.Local.iROW).LINE_NUM!FieldVal,V.Local.sForecast)
+						F.Intrinsic.Control.EndIf
+					F.Intrinsic.Control.EndIf
+				F.Intrinsic.Control.EndIf
+			F.Intrinsic.Control.EndIf
+			F.Intrinsic.String.Build("ForecastPONum = '{0}'",V.Local.sForecast,V.Local.sFilter)
+			F.Data.DataView.SetFilter("dtEDIFileA","dvCheck",V.Local.sFilter)
+			F.Intrinsic.Control.If(V.DataView.dtEDIFileA!dvCheck.RowCount,=,0)
+				'Add Text record
+				F.Data.DataTable.AddRow("dtEDIFileA","ForecastPONum",V.Local.sForecast,"PartnerVendor",V.DataTable.dtWorksheet(V.Local.iROW).PARTNER!FieldVal,"ForecastDateUser1",V.DataTable.dtWorksheet(V.Local.iROW).RUNDATE!FieldVal,"ContractUser2",V.DataTable.dtWorksheet(V.Local.iROW).CONTRACTNUM!FieldVal)
+			F.Intrinsic.Control.EndIf
+			'Add Line record
+			F.Intrinsic.Control.If(V.DataTable.dtWorksheet(V.Local.iROW).TYPE!FieldVal,=,"Contract Delivery Date")
+				V.Local.sType.Set("F")
+			F.Intrinsic.Control.Else
+				V.Local.sType.Set("P")
+			F.Intrinsic.Control.EndIf
+			V.Local.dData.Set(V.DataTable.dtWorksheet(V.Local.iROW).DELIV_DATE!FieldVal)
+			F.Data.DataTable.AddRow("dtEDIFileL","ForecastPONum",V.Local.sForecast,"PartnerVendor",V.DataTable.dtWorksheet(V.Local.iROW).PARTNER!FieldVal,"POLine",V.DataTable.dtWorksheet(V.Local.iROW).LINE_NUM!FieldVal,"POLineNum",V.DataTable.dtWorksheet(V.Local.iROW).LINE_NUM!FieldVal,"SupplierPartNum",V.DataTable.dtWorksheet(V.Local.iROW).PART!FieldVal,"PartDesc",V.DataTable.dtWorksheet(V.Local.iROW).DESC!FieldVal,"UOM",V.DataTable.dtWorksheet(V.Local.iROW).UOM!FieldVal,"Qty",V.DataTable.dtWorksheet(V.Local.iROW).QTY!FieldVal,"DeliveryPromiseDate",V.Local.dData.FormatYYYYMMDD,"OrderType",V.Local.sType)
+		F.Intrinsic.Control.Next(V.Local.iROW)
+		F.Intrinsic.Control.If(V.DataTable.dtWorksheet.RowCount,>,1)
+			F.Intrinsic.UI.CloseWaitDialog
+		F.Intrinsic.Control.EndIf
+		F.Data.DataTable.Close("dtWorksheet")
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.Next(V.Local.iWKSHT)
+
+'Process datatables into format for files
+F.Intrinsic.Control.If(V.DataTable.dtEDIFileH.RowCount,>,1)
+	F.Intrinsic.UI.InvokeWaitDialog("Processing file data for character based file","Processing file data")
+F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.For(V.Local.iCnt,0,V.DataTable.dtEDIFileH.RowCount--,1)
+	F.Intrinsic.Control.If(V.DataTable.dtEDIFileH.RowCount,>,1)
+		F.Intrinsic.UI.ChangeWaitStatus("Processing file data for character based file",V.Local.iCnt,0,V.DataTable.dtEDIFileH.RowCount--)
+	F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.If(V.Local.sFileString.Length,>,0)
+		F.Intrinsic.String.Build("{0}{1}",V.Local.sFileString,V.Ambient.NewLine,V.Local.sFileString)
+	F.Intrinsic.Control.EndIf
+	'Header line
+	'850-H-BUYER-ID (35 characters)
+	V.Local.sData.Set(V.DataTable.dtEDIFileH(V.Local.iCnt).PartnerVendor!FieldVal)
+	V.Local.sFileStringLine.Set(V.Local.sData.Left35)
+	F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",35,V.Local.sFileStringLine)
+	'850-H-PO-NUMBER (15 characters)
+	V.Local.sData.Set(V.DataTable.dtEDIFileH(V.Local.iCnt).ForecastPONum!FieldVal)
+	F.Intrinsic.String.Build("{0}{1}",V.Local.sFileStringLine,V.Local.sData.Left15,V.Local.sFileStringLine)
+	F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",50,V.Local.sFileStringLine)
+	'850-H-LINE-NBR (3 characters)
+	F.Intrinsic.String.Build("{0}000",V.Local.sFileStringLine,V.Local.sFileStringLine)
+	F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",510,V.Local.sFileStringLine)
+	'850-H-RECORD-TYPE (1 character)
+	F.Intrinsic.String.Build("{0}H",V.Local.sFileStringLine,V.Local.sFileStringLine)
+	F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",512,V.Local.sFileStringLine)
+	F.Intrinsic.String.Build("{0}{1}",V.Local.sFileString,V.Local.sFileStringLine,V.Local.sFileString)
+	
+	'Text Line
+	'850-A-BUYER-ID (35 characters)
+	V.Local.sData.Set(V.DataTable.dtEDIFileA(V.Local.iCnt).PartnerVendor!FieldVal)
+	V.Local.sFileStringLine.Set(V.Local.sData.Left35)
+	F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",35,V.Local.sFileStringLine)
+	'850-A-PO-NUMBER (15 characters)
+	V.Local.sData.Set(V.DataTable.dtEDIFileA(V.Local.iCnt).ForecastPONum!FieldVal)
+	F.Intrinsic.String.Build("{0}{1}",V.Local.sFileStringLine,V.Local.sData.Left15,V.Local.sFileStringLine)
+	F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",50,V.Local.sFileStringLine)
+	'850-A-LINE-NBR (3 characters)
+	F.Intrinsic.String.Build("{0}000",V.Local.sFileStringLine,V.Local.sFileStringLine)
+	F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",60,V.Local.sFileStringLine)
+	'850-A-USER1 (30 characters)
+	V.Local.dData.Set(V.DataTable.dtEDIFileA(V.Local.iCnt).ForecastDateUser1!FieldVal)
+	F.Intrinsic.String.ConvertToString(V.Local.dData,V.Local.sData)
+	F.Intrinsic.String.Build("{0}{1}",V.Local.sFileStringLine,V.Local.sData,V.Local.sFileStringLine)
+	F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",90,V.Local.sFileStringLine)
+	'850-A-USER2 (30 characters)
+	V.Local.sData.Set(V.DataTable.dtEDIFileA(V.Local.iCnt).ContractUser2!FieldVal)
+	F.Intrinsic.String.Build("{0}{1}",V.Local.sFileStringLine,V.Local.sData.Left30,V.Local.sFileStringLine)
+	F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",510,V.Local.sFileStringLine)
+	'850-A-RECORD-TYPE (1 character)
+	F.Intrinsic.String.Build("{0}A",V.Local.sFileStringLine,V.Local.sFileStringLine)
+	F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",512,V.Local.sFileStringLine)
+	F.Intrinsic.String.Build("{0}{1}{2}",V.Local.sFileString,V.Ambient.NewLine,V.Local.sFileStringLine,V.Local.sFileString)
+	
+	'Lines
+	F.Intrinsic.String.Build("ForecastPONum = '{0}'",V.DataTable.dtEDIFileH(V.Local.iCnt).ForecastPONum!FieldVal,V.Local.sFilter)
+	F.Data.DataView.SetFilter("dtEDIFileL","dvLines",V.Local.sFilter)
+	F.Intrinsic.Control.For(V.Local.iCnt2,0,V.DataView.dtEDIFileL!dvLines.RowCount--,1)
+		'850-L-BUYER-ID (35 characters)
+		V.Local.sData.Set(V.DataView.dtEDIFileL!dvLines(V.Local.iCnt2).PartnerVendor!FieldVal)
+		V.Local.sFileStringLine.Set(V.Local.sData.Left35)
+		F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",35,V.Local.sFileStringLine)
+		'850-L-PO-NUMBER (15 characters)
+		V.Local.sData.Set(V.DataView.dtEDIFileL!dvLines(V.Local.iCnt2).ForecastPONum!FieldVal)
+		F.Intrinsic.String.Build("{0}{1}",V.Local.sFileStringLine,V.Local.sData.Left15,V.Local.sFileStringLine)
+		F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",50,V.Local.sFileStringLine)
+		'850-L-LINE-NBR (3 characters)
+		F.Intrinsic.Math.Add(V.Local.iCnt2,1,V.Local.sNumber)
+		F.Intrinsic.String.LPad(V.Local.sNumber,"0",3,V.Local.sNumber)
+		F.Intrinsic.String.Build("{0}{1}",V.Local.sFileStringLine,V.Local.sNumber,V.Local.sFileStringLine)
+		F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",54,V.Local.sFileStringLine)
+		'850-L-BUYER-PART-NUM (20 characters)
+		V.Local.sData.Set(V.DataView.dtEDIFileL!dvLines(V.Local.iCnt2).SupplierPartNum!FieldVal)
+		F.Intrinsic.String.Build("{0}{1}",V.Local.sFileStringLine,V.Local.sData.Left20,V.Local.sFileStringLine)
+		F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",76,V.Local.sFileStringLine)
+		'850-L-ORDER-QUANTITY (12 characters)
+		F.Intrinsic.String.Split(V.DataView.dtEDIFileL!dvLines(V.Local.iCnt2).Qty!FieldVal,".",V.Local.sNumber)
+		F.Intrinsic.String.LPad(V.Local.sNumber(0),"0",8,V.Local.sNumber(0))
+		V.Local.sNumber(0).Set(V.Local.sNumber(0).Right8)
+		F.Intrinsic.Control.If(V.Local.sNumber.UBound,=,1)
+			F.Intrinsic.String.RPad(V.Local.sNumber(1),"0",4,V.Local.sNumber(1))
+			V.Local.sNumber(1).Set(V.Local.sNumber(1).Left4)
+			F.Intrinsic.String.Build("{0}{1}",V.Local.sNumber(0),V.Local.sNumber(1))
+		F.Intrinsic.Control.Else
+			F.Intrinsic.String.Build("{0}0000",V.Local.sNumber,V.Local.sNumber)
+		F.Intrinsic.Control.EndIf
+		F.Intrinsic.String.Build("{0}{1}",V.Local.sFileStringLine,V.Local.sNumber(0),V.Local.sFileStringLine)
+		V.Local.sNumber.Redim(0,0)
+		'850-L-UOM (2 characters)
+		V.Local.sData.Set(V.DataView.dtEDIFileL!dvLines(V.Local.iCnt2).UOM!FieldVal)
+		F.Intrinsic.String.Build("{0}{1}",V.Local.sFileStringLine,V.Local.sData.Left2,V.Local.sFileStringLine)
+		F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",103,V.Local.sFileStringLine)
+		'850-L-PART-DESCRIPTION (30 characters)
+		V.Local.sData.Set(V.DataView.dtEDIFileL!dvLines(V.Local.iCnt2).PartDesc!FieldVal)
+		F.Intrinsic.String.Build("{0}{1}",V.Local.sFileStringLine,V.Local.sData.Left30,V.Local.sFileStringLine)
+		F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",225,V.Local.sFileStringLine)
+		'850-L-PO-LINE_NUM (3 Characters)
+		V.Local.sData.Set(V.DataView.dtEDIFileL!dvLines(V.Local.iCnt2).POLineNum!FieldVal)
+		F.Intrinsic.String.Build("{0}{1}",V.Local.sFileStringLine,V.Local.sData.Left3,V.Local.sFileStringLine)	
+		F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",274,V.Local.sFileStringLine)
+		'850-L-ORDER-TYPE (1 character)
+		F.Intrinsic.String.Build("{0}{1}",V.Local.sFileStringLine,V.DataView.dtEDIFileL!dvLines(V.Local.iCnt2).OrderType!FieldVal,V.Local.sFileStringLine)
+		F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",474,V.Local.sFileStringLine)
+		'850-L-ITEM-PROMISE-DATE (8 characters)
+		F.Intrinsic.String.Build("{0}{1}",V.Local.sFileStringLine,V.DataView.dtEDIFileL!dvLines(V.Local.iCnt2).DeliveryPromiseDate!FieldVal,V.Local.sFileStringLine)
+		F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",510,V.Local.sFileStringLine)
+		'850-L-RECORD-TYPE (1 character)
+		F.Intrinsic.String.Build("{0}1",V.Local.sFileStringLine,V.Local.sFileStringLine)
+		F.Intrinsic.String.RPad(V.Local.sFileStringLine," ",512,V.Local.sFileStringLine)
+		F.Intrinsic.String.Build("{0}{1}{2}",V.Local.sFileString,V.Ambient.NewLine,V.Local.sFileStringLine,V.Local.sFileString)
+	F.Intrinsic.Control.Next(V.Local.iCnt2)
+F.Intrinsic.Control.Next(V.Local.iCnt)
+F.Intrinsic.Control.If(V.DataTable.dtEDIFileH.RowCount,>,1)
+	F.Intrinsic.UI.CloseWaitDialog
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.If(V.Local.sFileString,!=,"")
+	F.Intrinsic.String.Build("{0}\EA850{1}",V.Caller.FilesDir,V.Caller.CompanyCode,V.Local.sFile)
+	F.Intrinsic.File.Exists(V.Local.sFile,V.Local.bExists)
+	F.Intrinsic.Control.If(V.Local.bExists)
+		'File exists, read it in and add on to it
+		F.Intrinsic.File.File2String(V.Local.sFile,V.Local.sOldFileString)
+		F.Intrinsic.String.Build("{0}{1}{2}",V.Local.sOldFileString,V.Ambient.NewLine,V.Local.sFileString,V.Local.sFileString)
+		F.Intrinsic.String.Build("Success! File {0} was updated.",V.Local.sFile,V.Local.sMsg)
+	F.Intrinsic.Control.Else
+		'File does not exist already, so no need to append
+		F.Intrinsic.String.Build("Success! File {0} was created.",V.Local.sFile,V.Local.sMsg)
+	F.Intrinsic.Control.EndIf
+	
+	F.Intrinsic.File.String2File(V.Local.sFile,V.Local.sFileString)
+F.Intrinsic.Control.Else
+	F.Intrinsic.String.Build("Failed! No data to write to EDI file.",V.Local.sMsg,V.Local.sMsg)
+	F.Intrinsic.UI.Msgbox(V.Local.sMsg)
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.UI.Msgbox(V.Local.sMsg)
+
+F.Intrinsic.UI.Msgbox("Would you like to run OE From EDI Transactions?","OE -> File -> Order Entry From EDI Transactions",4,V.Local.iRet)
+
+F.Intrinsic.Control.If(V.Local.iRet,=,6)
+	F.Global.General.LaunchMenuTask(195,0,V.Local.iCnt)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.CallSub(ErrorMessage,"ScriptFile",V.Caller.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine)
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdProceed_Click.End
